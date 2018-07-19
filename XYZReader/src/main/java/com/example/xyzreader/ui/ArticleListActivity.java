@@ -116,6 +116,13 @@ public class ArticleListActivity extends AppCompatActivity implements
 
     private void refresh() {
         startService(new Intent(this, UpdaterService.class));
+
+        //snackbar to show list has been refreshed
+        coordinatorLayout = findViewById(R.id.cLayout);
+        Snackbar snackbar = Snackbar
+                .make(coordinatorLayout, R.string.snackbarText, Snackbar.LENGTH_LONG);
+
+        snackbar.show();
     }
 
     @Override
@@ -174,13 +181,6 @@ public class ArticleListActivity extends AppCompatActivity implements
 
         }
 
-        //snackbar to show list has been refreshed
-        coordinatorLayout = findViewById(R.id.cLayout);
-        Snackbar snackbar = Snackbar
-                .make(coordinatorLayout, R.string.snackbarText, Snackbar.LENGTH_SHORT);
-
-        snackbar.show();
-
     }
 
     @Override
@@ -210,6 +210,7 @@ public class ArticleListActivity extends AppCompatActivity implements
                 public void onClick(View view) {
                     startActivity(new Intent(Intent.ACTION_VIEW,
                             ItemsContract.Items.buildItemUri(getItemId(vh.getAdapterPosition()))));
+
                 }
             });
             return vh;
