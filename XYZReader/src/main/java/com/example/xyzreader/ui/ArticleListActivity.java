@@ -65,15 +65,11 @@ public class ArticleListActivity extends AppCompatActivity implements
         //final View toolbarContainerView = findViewById(R.id.toolbar_container);
 
         mSwipeRefreshLayout = findViewById(R.id.swipe_refresh_layout);
-
+        mSwipeRefreshLayout.setColorSchemeResources(R.color.theme_primary, R.color.theme_primary_dark, R.color.theme_accent);
         mSwipeRefreshLayout.setOnRefreshListener(
                 new SwipeRefreshLayout.OnRefreshListener() {
                     @Override
                     public void onRefresh() {
-                        //Log.i(LOG_TAG, "onRefresh called from SwipeRefreshLayout");
-
-                        // This method performs the actual data-refresh operation.
-                        // The method calls setRefreshing(false) when it's finished.
                         refresh();
                     }
                 }
