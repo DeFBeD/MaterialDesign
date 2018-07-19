@@ -8,6 +8,8 @@ import android.content.IntentFilter;
 import android.content.Loader;
 import android.database.Cursor;
 import android.os.Bundle;
+import android.support.design.widget.CoordinatorLayout;
+import android.support.design.widget.Snackbar;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.GridLayoutManager;
@@ -19,6 +21,8 @@ import android.text.Html;
 import android.text.format.DateUtils;
 import android.util.Log;
 import android.util.TypedValue;
+import android.view.Menu;
+import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
@@ -47,6 +51,7 @@ public class ArticleListActivity extends AppCompatActivity implements
     private Toolbar mToolbar;
     private SwipeRefreshLayout mSwipeRefreshLayout;
     private RecyclerView mRecyclerView;
+    private CoordinatorLayout coordinatorLayout;
 
     private SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.sss");
     // Use default locale format
@@ -60,10 +65,9 @@ public class ArticleListActivity extends AppCompatActivity implements
         setContentView(R.layout.activity_article_list);
 
         mToolbar = findViewById(R.id.toolbar);
+        setSupportActionBar(mToolbar);
 
-
-        //final View toolbarContainerView = findViewById(R.id.toolbar_container);
-
+        //logic for swipe to refresh action
         mSwipeRefreshLayout = findViewById(R.id.swipe_refresh_layout);
         mSwipeRefreshLayout.setColorSchemeResources(R.color.theme_primary, R.color.theme_primary_dark, R.color.theme_accent);
         mSwipeRefreshLayout.setOnRefreshListener(
@@ -81,6 +85,33 @@ public class ArticleListActivity extends AppCompatActivity implements
         if (savedInstanceState == null) {
             refresh();
         }
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        MenuInflater inflater = getMenuInflater();
+        inflater.inflate(R.menu.main, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+
+            // Check if user triggered a refresh:
+            case R.id.refresh:
+                Log.i(TAG, "Refresh menu item selected");
+
+                mSwipeRefreshLayout.setRefreshing(true);
+
+                refresh();
+
+                return true;
+        }
+
+        // User didn't trigger a refresh, let the superclass handle this action
+        return super.onOptionsItemSelected(item);
+
     }
 
     private void refresh() {
@@ -129,6 +160,7 @@ public class ArticleListActivity extends AppCompatActivity implements
         mRecyclerView.setAdapter(adapter);
         int columnCount = getResources().getInteger(R.integer.list_column_count);
 
+        //logic for deciding if device is tablet or not
         boolean tabletSize = getResources().getBoolean(R.bool.isTablet);
 
         if (tabletSize) {
@@ -141,6 +173,13 @@ public class ArticleListActivity extends AppCompatActivity implements
             mRecyclerView.setLayoutManager(list);
 
         }
+
+        //snackbar to show list has been refreshed
+        coordinatorLayout = findViewById(R.id.cLayout);
+        Snackbar snackbar = Snackbar
+                .make(coordinatorLayout, R.string.snackbarText, Snackbar.LENGTH_SHORT);
+
+        snackbar.show();
 
     }
 
