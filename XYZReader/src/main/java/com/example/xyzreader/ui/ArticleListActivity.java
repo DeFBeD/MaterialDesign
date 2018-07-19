@@ -66,6 +66,19 @@ public class ArticleListActivity extends AppCompatActivity implements
 
         mSwipeRefreshLayout = findViewById(R.id.swipe_refresh_layout);
 
+        mSwipeRefreshLayout.setOnRefreshListener(
+                new SwipeRefreshLayout.OnRefreshListener() {
+                    @Override
+                    public void onRefresh() {
+                        //Log.i(LOG_TAG, "onRefresh called from SwipeRefreshLayout");
+
+                        // This method performs the actual data-refresh operation.
+                        // The method calls setRefreshing(false) when it's finished.
+                        refresh();
+                    }
+                }
+        );
+
         mRecyclerView = findViewById(R.id.recycler_view);
         getLoaderManager().initLoader(0, null, this);
 
