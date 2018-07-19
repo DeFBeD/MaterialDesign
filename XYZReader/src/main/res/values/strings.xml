@@ -9,5 +9,6 @@
 
     <string name="up">Up</string>
     <string name="snackbarText">List is Refreshing!</string>
+    <string name="transition">pic_transition</string>
 
 </resources>
