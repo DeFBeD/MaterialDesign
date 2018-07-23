@@ -7,4 +7,6 @@
 
     <dimen name="default_16_padding">16dp</dimen>
     <dimen name="default_4_padding">4dp</dimen>
+    <dimen name="refresh_elevation">3dp</dimen>
+    <dimen name="appBar_elevation">4dp</dimen>
 </resources>

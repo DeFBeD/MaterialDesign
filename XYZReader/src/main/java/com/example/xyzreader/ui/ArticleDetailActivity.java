@@ -65,7 +65,7 @@ public class ArticleDetailActivity extends AppCompatActivity
         @Override
         public void onMapSharedElements(List<String> names, Map<String, View> sharedElements) {
             if (mIsReturning) {
-                ImageView sharedElement = mCurrentDetailsFragment.getArticlePhotoView();
+                ImageView sharedElement = mCurrentDetailsFragment.getPhoto();
                 if (sharedElement == null) {
                     // If shared element is null, then it has been scrolled off screen and
                     // no longer visible. In this case we cancel the shared element transition by

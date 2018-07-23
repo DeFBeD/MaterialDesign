@@ -10,6 +10,8 @@
                                     android:layout_marginBottom="@dimen/default_4_padding"
                                     android:clickable="true"
                                     android:focusable="true"
+                                    android:elevation="1dp"
+                                    android:stateListAnimator="@animator/card_state_list_anim"
                                     android:foreground="?selectableItemBackground">
 
     <LinearLayout

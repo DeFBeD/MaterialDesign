@@ -78,10 +78,7 @@ public class ArticleDetailFragment extends Fragment implements
     private int mStartingPosition;
     private boolean mIsTransitioning;
 
-    /**
-     * Mandatory empty constructor for the fragment manager to instantiate the
-     * fragment (e.g. upon screen orientation changes).
-     */
+
     public ArticleDetailFragment() {
     }
 
@@ -90,7 +87,6 @@ public class ArticleDetailFragment extends Fragment implements
         arguments.putLong(ARG_ITEM_ID, itemId);
         arguments.putInt(ARG_ARTICLE_IMAGE_POSITION, position);
         arguments.putInt(ARG_STARTING_ARTICLE_IMAGE_POSITION, position);
-
         ArticleDetailFragment fragment = new ArticleDetailFragment();
         fragment.setArguments(arguments);
         return fragment;
@@ -154,6 +150,7 @@ public class ArticleDetailFragment extends Fragment implements
                 mScrollY = mScrollView.getScrollY();
                 getActivityCast().onUpButtonFloorChanged(mItemId, ArticleDetailFragment.this);
                 mPhotoContainerView.setTranslationY((int) (mScrollY - mScrollY / PARALLAX_FACTOR));
+
                 updateStatusBar();
             }
         });
@@ -352,7 +349,7 @@ public class ArticleDetailFragment extends Fragment implements
     }
 
     @Nullable
-    public ImageView getArticlePhotoView() {
+    public ImageView getPhoto() {
         if (isViewInBounds(getActivity().getWindow().getDecorView(), mPhotoView))
             return mPhotoView;
 
