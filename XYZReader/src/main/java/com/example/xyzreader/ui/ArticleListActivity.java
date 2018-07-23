@@ -9,6 +9,8 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.Loader;
 import android.database.Cursor;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Build;
 import android.os.Bundle;
 import android.support.design.widget.CoordinatorLayout;
@@ -56,7 +58,7 @@ import butterknife.ButterKnife;
  * activity presents a grid of items as cards.
  */
 public class ArticleListActivity extends AppCompatActivity implements
-        LoaderManager.LoaderCallbacks<Cursor> {
+        LoaderManager.LoaderCallbacks<Cursor>,SwipeRefreshLayout.OnRefreshListener {
 
     private static final String TAG = ArticleListActivity.class.toString();
 
@@ -71,7 +73,10 @@ public class ArticleListActivity extends AppCompatActivity implements
     CoordinatorLayout coordinatorLayout;
 
     public boolean mIsRefreshing;
-    private Context mContext;
+
+    public static final String EXTRA_STARTING_ARTICLE_POSITION = "starting_article_position";
+    public static final String EXTRA_CURRENT_ARTICLE_POSITION = "current_article_position";
+
 
     private SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.sss");
     // Use default locale format
@@ -79,34 +84,89 @@ public class ArticleListActivity extends AppCompatActivity implements
     // Most time functions can only handle 1902 - 2037
     private GregorianCalendar START_OF_EPOCH = new GregorianCalendar(2, 1, 1);
 
-
-
-
+    /**
+     * Techique from androiddesignpatterns.com to return perform shared element transitions
+     * when returning from another page (of the ViewPager)
+     * http://www.androiddesignpatterns.com/2014/12/activity-fragment-transitions-in-android-lollipop-part1.html    *
+     *
+     * Companion Github code for the post series:
+     * https://github.com/alexjlockwood/adp-activity-transitions
+     */
+    private Bundle mTmpReenterState;
+    private final SharedElementCallback mCallback = new SharedElementCallback() {
         @Override
+        public void onMapSharedElements(List<String> names, Map<String, View> sharedElements) {
+            if (mTmpReenterState != null) {
+                int startingPosition = mTmpReenterState.getInt(EXTRA_STARTING_ARTICLE_POSITION);
+                int currentPosition = mTmpReenterState.getInt(EXTRA_CURRENT_ARTICLE_POSITION);
+                if (startingPosition != currentPosition) {
+                    // If startingPosition != currentPosition the user must have swiped to a
+                    // different page in the DetailsActivity. We must update the shared element
+                    // so that the correct one falls into place.
+                    String newTransitionName = getString(R.string.transition)+currentPosition;
+                    View newSharedElement = mRecyclerView.findViewWithTag(newTransitionName);
+                    if (newSharedElement != null) {
+                        names.clear();
+                        names.add(newTransitionName);
+                        sharedElements.clear();
+                        sharedElements.put(newTransitionName, newSharedElement);
+                    }
+                }
+
+                mTmpReenterState = null;
+            }
+        }
+    };
+
+
+
+
+
+    @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_article_list);
             ButterKnife.bind(this);
 
         setSupportActionBar(mToolbar);
+        setExitSharedElementCallback(mCallback);
 
 
         //logic for swipe to refresh action
         mSwipeRefreshLayout.setColorSchemeResources(R.color.theme_primary, R.color.theme_primary_dark, R.color.theme_accent);
-        mSwipeRefreshLayout.setOnRefreshListener(
-                new SwipeRefreshLayout.OnRefreshListener() {
-                    @Override
-                    public void onRefresh() {
-                        refresh();
-                    }
-                }
-        );
+        mSwipeRefreshLayout.setOnRefreshListener(this);
 
         getLoaderManager().initLoader(0, null, this);
 
         if (savedInstanceState == null) {
             refresh();
         }
+    }
+
+    @Override
+    public void onActivityReenter(int resultCode, Intent data) {
+        super.onActivityReenter(resultCode, data);
+        mTmpReenterState = new Bundle(data.getExtras());
+        int startingPosition = mTmpReenterState.getInt(EXTRA_STARTING_ARTICLE_POSITION);
+        int currentPosition = mTmpReenterState.getInt(EXTRA_CURRENT_ARTICLE_POSITION);
+        if (startingPosition != currentPosition) {
+            mRecyclerView.scrollToPosition(currentPosition);
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            postponeEnterTransition();
+        }
+        mRecyclerView.getViewTreeObserver().addOnPreDrawListener(new ViewTreeObserver.OnPreDrawListener() {
+            @Override
+            public boolean onPreDraw() {
+                mRecyclerView.getViewTreeObserver().removeOnPreDrawListener(this);
+                // TODO: figure out why it is necessary to request layout here in order to get a smooth transition.
+                mRecyclerView.requestLayout();
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    startPostponedEnterTransition();
+                }
+                return true;
+            }
+        });
     }
 
     @Override
@@ -134,44 +194,6 @@ public class ArticleListActivity extends AppCompatActivity implements
         // User didn't trigger a refresh, let the superclass handle this action
         return super.onOptionsItemSelected(item);
 
-    }
-
-    private void refresh() {
-        startService(new Intent(this, UpdaterService.class));
-
-        //snackbar to show list has been refreshed
-
-        Snackbar snackbar = Snackbar
-                .make(coordinatorLayout, R.string.snackbarText, Snackbar.LENGTH_LONG);
-
-        snackbar.show();
-    }
-
-    @Override
-    protected void onStart() {
-        super.onStart();
-        registerReceiver(mRefreshingReceiver,
-                new IntentFilter(UpdaterService.BROADCAST_ACTION_STATE_CHANGE));
-    }
-
-    @Override
-    protected void onStop() {
-        super.onStop();
-        unregisterReceiver(mRefreshingReceiver);
-    }
-
-    private BroadcastReceiver mRefreshingReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            if (UpdaterService.BROADCAST_ACTION_STATE_CHANGE.equals(intent.getAction())) {
-                mIsRefreshing = intent.getBooleanExtra(UpdaterService.EXTRA_REFRESHING, false);
-                updateRefreshingUI();
-            }
-        }
-    };
-
-    private void updateRefreshingUI() {
-        mSwipeRefreshLayout.setRefreshing(mIsRefreshing);
     }
 
     @Override
@@ -230,21 +252,29 @@ public class ArticleListActivity extends AppCompatActivity implements
                 @Override
                 public void onClick(View view) {
 
-                    int mArticlePosition = vh.getAdapterPosition();
+                    long itemId = getItemId(vh.getAdapterPosition());
 
-                    ActivityOptionsCompat bundle = null;
-                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
-                        bundle = ActivityOptionsCompat.makeSceneTransitionAnimation(
-                                ArticleListActivity.this,
-                                vh.thumbnailView,
-                                vh.thumbnailView.getTransitionName()
-                        );
+                    Intent i = new Intent(
+                            Intent.ACTION_VIEW,
+                            ItemsContract.Items.buildItemUri(itemId)
+                    );
+
+                    i.putExtra(EXTRA_STARTING_ARTICLE_POSITION, vh.mArticlePosition);
+
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                        ActivityOptions options = ActivityOptions
+                                .makeSceneTransitionAnimation(
+                                        ArticleListActivity.this,
+                                        vh.thumbnailView,
+                                        vh.thumbnailView.getTransitionName()
+                                );
+
+                        startActivity(i, options.toBundle());
+                    }else{
+                        startActivity(i);
                     }
-                    Intent intent = new Intent(Intent.ACTION_VIEW,
-                            ItemsContract.Items.buildItemUri(getItemId(vh.getAdapterPosition())));
-                    getApplicationContext().startActivity(intent, bundle.toBundle());
-
                 }
+
             });
             return vh;
         }
@@ -284,6 +314,13 @@ public class ArticleListActivity extends AppCompatActivity implements
                     mCursor.getString(ArticleLoader.Query.THUMB_URL),
                     ImageLoaderHelper.getInstance(ArticleListActivity.this).getImageLoader());
             holder.thumbnailView.setAspectRatio(mCursor.getFloat(ArticleLoader.Query.ASPECT_RATIO));
+
+            String transitionName = getString(R.string.transition)+position;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                holder.thumbnailView.setTransitionName(transitionName);
+            }
+            holder.thumbnailView.setTag(transitionName);
+            holder.mArticlePosition = position;
         }
 
         @Override
@@ -296,6 +333,7 @@ public class ArticleListActivity extends AppCompatActivity implements
         public DynamicHeightNetworkImageView thumbnailView;
         public TextView titleView;
         public TextView subtitleView;
+        int mArticlePosition;
 
         public ViewHolder(View view) {
             super(view);
@@ -303,6 +341,61 @@ public class ArticleListActivity extends AppCompatActivity implements
             titleView = (TextView) view.findViewById(R.id.article_title);
             subtitleView = (TextView) view.findViewById(R.id.article_subtitle);
         }
+    }
+
+    private void refresh() {
+        if(hasConnectivity(this,false))
+            startService(new Intent(this, UpdaterService.class));
+        else {
+            Snackbar.make(
+                    findViewById(R.id.cLayout),
+                    R.string.snackbarText,
+                    Snackbar.LENGTH_LONG).show();
+
+            mIsRefreshing = false;
+            updateRefreshingUI();
+        }
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        registerReceiver(mRefreshingReceiver,
+                new IntentFilter(UpdaterService.BROADCAST_ACTION_STATE_CHANGE));
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        unregisterReceiver(mRefreshingReceiver);
+    }
+
+    private BroadcastReceiver mRefreshingReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (UpdaterService.BROADCAST_ACTION_STATE_CHANGE.equals(intent.getAction())) {
+                mIsRefreshing = intent.getBooleanExtra(UpdaterService.EXTRA_REFRESHING, false);
+                updateRefreshingUI();
+            }
+        }
+    };
+
+    private void updateRefreshingUI() {
+        mSwipeRefreshLayout.setRefreshing(mIsRefreshing);
+    }
+
+
+    public static boolean hasConnectivity(Context context, boolean roamingOK) {
+        boolean hasConnectivity;
+        ConnectivityManager connectivityManager = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo info = connectivityManager.getActiveNetworkInfo();
+        hasConnectivity = info != null && (info.isConnected() || (roamingOK && info.isRoaming()));
+        return hasConnectivity;
+    }
+
+    @Override
+    public void onRefresh() {
+        refresh();
     }
 
 

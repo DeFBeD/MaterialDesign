@@ -16,7 +16,10 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.GregorianCalendar;
 
+import android.os.Build;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.v4.app.ShareCompat;
 import android.support.v7.graphics.Palette;
 import android.text.Html;
@@ -26,6 +29,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewTreeObserver;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -45,6 +49,9 @@ public class ArticleDetailFragment extends Fragment implements
 
     public static final String ARG_ITEM_ID = "item_id";
     private static final float PARALLAX_FACTOR = 1.25f;
+    private static final String ARG_STARTING_ARTICLE_IMAGE_POSITION = "arg_starting_article_position";
+    private static final String ARG_ARTICLE_IMAGE_POSITION = "arg_article_position";
+    private static final int MAX_ARTICLE_LENGTH = 1000;
 
     private Cursor mCursor;
     private long mItemId;
@@ -67,6 +74,10 @@ public class ArticleDetailFragment extends Fragment implements
     // Most time functions can only handle 1902 - 2037
     private GregorianCalendar START_OF_EPOCH = new GregorianCalendar(2,1,1);
 
+    private int mArticlePosition;
+    private int mStartingPosition;
+    private boolean mIsTransitioning;
+
     /**
      * Mandatory empty constructor for the fragment manager to instantiate the
      * fragment (e.g. upon screen orientation changes).
@@ -74,9 +85,12 @@ public class ArticleDetailFragment extends Fragment implements
     public ArticleDetailFragment() {
     }
 
-    public static ArticleDetailFragment newInstance(long itemId) {
+    public static ArticleDetailFragment newInstance(long itemId,int position) {
         Bundle arguments = new Bundle();
         arguments.putLong(ARG_ITEM_ID, itemId);
+        arguments.putInt(ARG_ARTICLE_IMAGE_POSITION,position);
+        arguments.putInt(ARG_STARTING_ARTICLE_IMAGE_POSITION,position);
+
         ArticleDetailFragment fragment = new ArticleDetailFragment();
         fragment.setArguments(arguments);
         return fragment;
@@ -85,6 +99,10 @@ public class ArticleDetailFragment extends Fragment implements
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        mStartingPosition = getArguments().getInt(ARG_STARTING_ARTICLE_IMAGE_POSITION);
+        mArticlePosition = getArguments().getInt(ARG_ARTICLE_IMAGE_POSITION);
+        mIsTransitioning = savedInstanceState == null && mStartingPosition == mArticlePosition;
 
         if (getArguments().containsKey(ARG_ITEM_ID)) {
             mItemId = getArguments().getLong(ARG_ITEM_ID);
@@ -115,6 +133,11 @@ public class ArticleDetailFragment extends Fragment implements
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
             Bundle savedInstanceState) {
         mRootView = inflater.inflate(R.layout.fragment_article_detail, container, false);
+        mPhotoView = (ImageView) mRootView.findViewById(R.id.photo);
+        String transitionName = getString(R.string.transition)+mArticlePosition;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            mPhotoView.setTransitionName(transitionName);
+        }
         mDrawInsetsFrameLayout = (DrawInsetsFrameLayout)
                 mRootView.findViewById(R.id.draw_insets_frame_layout);
         mDrawInsetsFrameLayout.setOnInsetsCallback(new DrawInsetsFrameLayout.OnInsetsCallback() {
@@ -232,7 +255,15 @@ public class ArticleDetailFragment extends Fragment implements
                                 + "</font>"));
 
             }
-            bodyView.setText(Html.fromHtml(mCursor.getString(ArticleLoader.Query.BODY).replaceAll("(\r\n|\n)", "<br />")));
+
+            // Truncating the text because it is quite large and causes app crashes when
+            // loading with transitions.
+            String trucatedBody = mCursor.getString(ArticleLoader.Query.BODY)
+                    .substring(0,MAX_ARTICLE_LENGTH)
+                    .replaceAll("(\r\n|\n)", "<br />");
+
+            bodyView.setText(Html.fromHtml(trucatedBody));
+
             ImageLoaderHelper.getInstance(getActivity()).getImageLoader()
                     .get(mCursor.getString(ArticleLoader.Query.PHOTO_URL), new ImageLoader.ImageListener() {
                         @Override
@@ -268,6 +299,9 @@ public class ArticleDetailFragment extends Fragment implements
 
     @Override
     public void onLoadFinished(Loader<Cursor> cursorLoader, Cursor cursor) {
+
+        startPostponedEnterTransition();
+
         if (!isAdded()) {
             if (cursor != null) {
                 cursor.close();
@@ -285,6 +319,21 @@ public class ArticleDetailFragment extends Fragment implements
         bindViews();
     }
 
+    public void startPostponedEnterTransition() {
+        if (mArticlePosition == mStartingPosition) {
+            mPhotoView.getViewTreeObserver().addOnPreDrawListener(new ViewTreeObserver.OnPreDrawListener() {
+                @Override
+                public boolean onPreDraw() {
+                    mPhotoView.getViewTreeObserver().removeOnPreDrawListener(this);
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                        getActivity().startPostponedEnterTransition();
+                    }
+                    return true;
+                }
+            });
+        }
+    }
+
     @Override
     public void onLoaderReset(Loader<Cursor> cursorLoader) {
         mCursor = null;
@@ -300,5 +349,19 @@ public class ArticleDetailFragment extends Fragment implements
         return mIsCard
                 ? (int) mPhotoContainerView.getTranslationY() + mPhotoView.getHeight() - mScrollY
                 : mPhotoView.getHeight() - mScrollY;
+    }
+
+    @Nullable
+    public ImageView getArticlePhotoView() {
+        if(isViewInBounds(getActivity().getWindow().getDecorView(), mPhotoView))
+            return mPhotoView;
+
+        return null;
+    }
+
+    private static boolean isViewInBounds(@NonNull View container, @NonNull View view) {
+        Rect containerBounds = new Rect();
+        container.getHitRect(containerBounds);
+        return view.getLocalVisibleRect(containerBounds);
     }
 }
