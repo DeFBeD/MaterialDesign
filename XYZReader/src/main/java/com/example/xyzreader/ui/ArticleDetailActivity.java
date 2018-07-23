@@ -27,6 +27,9 @@ import com.example.xyzreader.data.ItemsContract;
 import java.util.List;
 import java.util.Map;
 
+import butterknife.BindView;
+import butterknife.ButterKnife;
+
 import static com.example.xyzreader.ui.ArticleListActivity.EXTRA_CURRENT_ARTICLE_POSITION;
 import static com.example.xyzreader.ui.ArticleListActivity.EXTRA_STARTING_ARTICLE_POSITION;
 
@@ -42,17 +45,21 @@ public class ArticleDetailActivity extends AppCompatActivity
     private long mSelectedItemId;
     private int mSelectedItemUpButtonFloor = Integer.MAX_VALUE;
     private int mTopInset;
-
-    private ViewPager mPager;
-    private MyPagerAdapter mPagerAdapter;
-    private View mUpButtonContainer;
-    private View mUpButton;
-
     private ArticleDetailFragment mCurrentDetailsFragment;
     private static final String STATE_CURRENT_PAGE_POSITION = "state_current_page_position";
     private int mCurrentPosition;
     private int mStartingPosition;
     private boolean mIsReturning;
+
+
+    @BindView(R.id.pager)
+    ViewPager mPager;
+    private MyPagerAdapter mPagerAdapter;
+    @BindView(R.id.up_container)
+    View mUpButtonContainer;
+    @BindView(R.id.action_up)
+    View mUpButton;
+
 
     private final SharedElementCallback mCallback = new SharedElementCallback() {
         @Override
@@ -86,6 +93,7 @@ public class ArticleDetailActivity extends AppCompatActivity
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_article_detail);
+        ButterKnife.bind(this);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             getWindow().getDecorView().setSystemUiVisibility(
                     View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN |
@@ -106,7 +114,6 @@ public class ArticleDetailActivity extends AppCompatActivity
         getLoaderManager().initLoader(0, null, this);
 
         mPagerAdapter = new MyPagerAdapter(getFragmentManager());
-        mPager = findViewById(R.id.pager);
         mPager.setAdapter(mPagerAdapter);
         mPager.setPageMargin((int) TypedValue
                 .applyDimension(TypedValue.COMPLEX_UNIT_DIP, 1, getResources().getDisplayMetrics()));
@@ -132,13 +139,10 @@ public class ArticleDetailActivity extends AppCompatActivity
             }
         });
 
-        mUpButtonContainer = findViewById(R.id.up_container);
-
-        mUpButton = findViewById(R.id.action_up);
         mUpButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                onSupportNavigateUp();
+                supportFinishAfterTransition();
             }
         });
 

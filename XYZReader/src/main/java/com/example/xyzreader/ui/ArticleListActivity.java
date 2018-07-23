@@ -58,7 +58,6 @@ public class ArticleListActivity extends AppCompatActivity implements
 
     private static final String TAG = ArticleListActivity.class.toString();
 
-
     @BindView(R.id.toolbar)
     Toolbar mToolbar;
     @BindView(R.id.swipe_refresh_layout)

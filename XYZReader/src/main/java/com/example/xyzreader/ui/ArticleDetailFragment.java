@@ -72,7 +72,7 @@ public class ArticleDetailFragment extends Fragment implements
     // Use default locale format
     private SimpleDateFormat outputFormat = new SimpleDateFormat();
     // Most time functions can only handle 1902 - 2037
-    private GregorianCalendar START_OF_EPOCH = new GregorianCalendar(2,1,1);
+    private GregorianCalendar START_OF_EPOCH = new GregorianCalendar(2, 1, 1);
 
     private int mArticlePosition;
     private int mStartingPosition;
@@ -85,11 +85,11 @@ public class ArticleDetailFragment extends Fragment implements
     public ArticleDetailFragment() {
     }
 
-    public static ArticleDetailFragment newInstance(long itemId,int position) {
+    public static ArticleDetailFragment newInstance(long itemId, int position) {
         Bundle arguments = new Bundle();
         arguments.putLong(ARG_ITEM_ID, itemId);
-        arguments.putInt(ARG_ARTICLE_IMAGE_POSITION,position);
-        arguments.putInt(ARG_STARTING_ARTICLE_IMAGE_POSITION,position);
+        arguments.putInt(ARG_ARTICLE_IMAGE_POSITION, position);
+        arguments.putInt(ARG_STARTING_ARTICLE_IMAGE_POSITION, position);
 
         ArticleDetailFragment fragment = new ArticleDetailFragment();
         fragment.setArguments(arguments);
@@ -131,10 +131,10 @@ public class ArticleDetailFragment extends Fragment implements
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
-            Bundle savedInstanceState) {
+                             Bundle savedInstanceState) {
         mRootView = inflater.inflate(R.layout.fragment_article_detail, container, false);
         mPhotoView = (ImageView) mRootView.findViewById(R.id.photo);
-        String transitionName = getString(R.string.transition)+mArticlePosition;
+        String transitionName = getString(R.string.transition) + mArticlePosition;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             mPhotoView.setTransitionName(transitionName);
         }
@@ -147,7 +147,7 @@ public class ArticleDetailFragment extends Fragment implements
             }
         });
 
-        mScrollView = (ObservableScrollView) mRootView.findViewById(R.id.scrollview);
+        mScrollView = mRootView.findViewById(R.id.scrollview);
         mScrollView.setCallbacks(new ObservableScrollView.Callbacks() {
             @Override
             public void onScrollChanged() {
@@ -158,7 +158,7 @@ public class ArticleDetailFragment extends Fragment implements
             }
         });
 
-        mPhotoView = (ImageView) mRootView.findViewById(R.id.photo);
+        mPhotoView = mRootView.findViewById(R.id.photo);
         mPhotoContainerView = mRootView.findViewById(R.id.photo_container);
 
         mStatusBarColorDrawable = new ColorDrawable(0);
@@ -223,10 +223,10 @@ public class ArticleDetailFragment extends Fragment implements
             return;
         }
 
-        TextView titleView = (TextView) mRootView.findViewById(R.id.article_title);
-        TextView bylineView = (TextView) mRootView.findViewById(R.id.article_byline);
+        TextView titleView = mRootView.findViewById(R.id.article_title);
+        TextView bylineView = mRootView.findViewById(R.id.article_byline);
         bylineView.setMovementMethod(new LinkMovementMethod());
-        TextView bodyView = (TextView) mRootView.findViewById(R.id.article_body);
+        TextView bodyView = mRootView.findViewById(R.id.article_body);
 
 
         bodyView.setTypeface(Typeface.createFromAsset(getResources().getAssets(), "Rosario-Regular.ttf"));
@@ -251,7 +251,7 @@ public class ArticleDetailFragment extends Fragment implements
                 // If date is before 1902, just show the string
                 bylineView.setText(Html.fromHtml(
                         outputFormat.format(publishedDate) + " by <font color='#ffffff'>"
-                        + mCursor.getString(ArticleLoader.Query.AUTHOR)
+                                + mCursor.getString(ArticleLoader.Query.AUTHOR)
                                 + "</font>"));
 
             }
@@ -259,7 +259,7 @@ public class ArticleDetailFragment extends Fragment implements
             // Truncating the text because it is quite large and causes app crashes when
             // loading with transitions.
             String trucatedBody = mCursor.getString(ArticleLoader.Query.BODY)
-                    .substring(0,MAX_ARTICLE_LENGTH)
+                    .substring(0, MAX_ARTICLE_LENGTH)
                     .replaceAll("(\r\n|\n)", "<br />");
 
             bodyView.setText(Html.fromHtml(trucatedBody));
@@ -287,7 +287,7 @@ public class ArticleDetailFragment extends Fragment implements
         } else {
             mRootView.setVisibility(View.GONE);
             titleView.setText("N/A");
-            bylineView.setText("N/A" );
+            bylineView.setText("N/A");
             bodyView.setText("N/A");
         }
     }
@@ -353,7 +353,7 @@ public class ArticleDetailFragment extends Fragment implements
 
     @Nullable
     public ImageView getArticlePhotoView() {
-        if(isViewInBounds(getActivity().getWindow().getDecorView(), mPhotoView))
+        if (isViewInBounds(getActivity().getWindow().getDecorView(), mPhotoView))
             return mPhotoView;
 
         return null;
