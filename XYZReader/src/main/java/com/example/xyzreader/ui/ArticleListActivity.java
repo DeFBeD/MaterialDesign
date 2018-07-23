@@ -1,6 +1,5 @@
 package com.example.xyzreader.ui;
 
-import android.app.Activity;
 import android.app.ActivityOptions;
 import android.app.LoaderManager;
 import android.content.BroadcastReceiver;
@@ -15,19 +14,16 @@ import android.os.Build;
 import android.os.Bundle;
 import android.support.design.widget.CoordinatorLayout;
 import android.support.design.widget.Snackbar;
-import android.support.v4.app.ActivityOptionsCompat;
 import android.support.v4.app.SharedElementCallback;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
-import android.support.v7.widget.StaggeredGridLayoutManager;
 import android.support.v7.widget.Toolbar;
 import android.text.Html;
 import android.text.format.DateUtils;
 import android.util.Log;
-import android.util.TypedValue;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -58,7 +54,7 @@ import butterknife.ButterKnife;
  * activity presents a grid of items as cards.
  */
 public class ArticleListActivity extends AppCompatActivity implements
-        LoaderManager.LoaderCallbacks<Cursor>,SwipeRefreshLayout.OnRefreshListener {
+        LoaderManager.LoaderCallbacks<Cursor>, SwipeRefreshLayout.OnRefreshListener {
 
     private static final String TAG = ArticleListActivity.class.toString();
 
@@ -84,14 +80,9 @@ public class ArticleListActivity extends AppCompatActivity implements
     // Most time functions can only handle 1902 - 2037
     private GregorianCalendar START_OF_EPOCH = new GregorianCalendar(2, 1, 1);
 
-    /**
-     * Techique from androiddesignpatterns.com to return perform shared element transitions
-     * when returning from another page (of the ViewPager)
-     * http://www.androiddesignpatterns.com/2014/12/activity-fragment-transitions-in-android-lollipop-part1.html    *
-     *
-     * Companion Github code for the post series:
-     * https://github.com/alexjlockwood/adp-activity-transitions
-     */
+
+    //Source from androiddesignpatterns.com to return perform shared element transitions
+
     private Bundle mTmpReenterState;
     private final SharedElementCallback mCallback = new SharedElementCallback() {
         @Override
@@ -103,7 +94,7 @@ public class ArticleListActivity extends AppCompatActivity implements
                     // If startingPosition != currentPosition the user must have swiped to a
                     // different page in the DetailsActivity. We must update the shared element
                     // so that the correct one falls into place.
-                    String newTransitionName = getString(R.string.transition)+currentPosition;
+                    String newTransitionName = getString(R.string.transition) + currentPosition;
                     View newSharedElement = mRecyclerView.findViewWithTag(newTransitionName);
                     if (newSharedElement != null) {
                         names.clear();
@@ -112,25 +103,19 @@ public class ArticleListActivity extends AppCompatActivity implements
                         sharedElements.put(newTransitionName, newSharedElement);
                     }
                 }
-
                 mTmpReenterState = null;
             }
         }
     };
 
-
-
-
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_article_list);
-            ButterKnife.bind(this);
+        ButterKnife.bind(this);
 
         setSupportActionBar(mToolbar);
         setExitSharedElementCallback(mCallback);
-
 
         //logic for swipe to refresh action
         mSwipeRefreshLayout.setColorSchemeResources(R.color.theme_primary, R.color.theme_primary_dark, R.color.theme_accent);
@@ -159,7 +144,6 @@ public class ArticleListActivity extends AppCompatActivity implements
             @Override
             public boolean onPreDraw() {
                 mRecyclerView.getViewTreeObserver().removeOnPreDrawListener(this);
-                // TODO: figure out why it is necessary to request layout here in order to get a smooth transition.
                 mRecyclerView.requestLayout();
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                     startPostponedEnterTransition();
@@ -220,10 +204,7 @@ public class ArticleListActivity extends AppCompatActivity implements
             LinearLayoutManager list =
                     new LinearLayoutManager(this);
             mRecyclerView.setLayoutManager(list);
-
         }
-
-
     }
 
     @Override
@@ -270,7 +251,7 @@ public class ArticleListActivity extends AppCompatActivity implements
                                 );
 
                         startActivity(i, options.toBundle());
-                    }else{
+                    } else {
                         startActivity(i);
                     }
                 }
@@ -315,7 +296,7 @@ public class ArticleListActivity extends AppCompatActivity implements
                     ImageLoaderHelper.getInstance(ArticleListActivity.this).getImageLoader());
             holder.thumbnailView.setAspectRatio(mCursor.getFloat(ArticleLoader.Query.ASPECT_RATIO));
 
-            String transitionName = getString(R.string.transition)+position;
+            String transitionName = getString(R.string.transition) + position;
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                 holder.thumbnailView.setTransitionName(transitionName);
             }
@@ -344,12 +325,17 @@ public class ArticleListActivity extends AppCompatActivity implements
     }
 
     private void refresh() {
-        if(hasConnectivity(this,false))
+        if (isConnected(this, false)) {
+
             startService(new Intent(this, UpdaterService.class));
-        else {
             Snackbar.make(
                     findViewById(R.id.cLayout),
                     R.string.snackbarText,
+                    Snackbar.LENGTH_LONG).show();
+        } else {
+            Snackbar.make(
+                    findViewById(R.id.cLayout),
+                    "Please check your connection",
                     Snackbar.LENGTH_LONG).show();
 
             mIsRefreshing = false;
@@ -385,11 +371,11 @@ public class ArticleListActivity extends AppCompatActivity implements
     }
 
 
-    public static boolean hasConnectivity(Context context, boolean roamingOK) {
+    public static boolean isConnected(Context context, boolean roamingIsAllowed) {
         boolean hasConnectivity;
         ConnectivityManager connectivityManager = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
         NetworkInfo info = connectivityManager.getActiveNetworkInfo();
-        hasConnectivity = info != null && (info.isConnected() || (roamingOK && info.isRoaming()));
+        hasConnectivity = info != null && (info.isConnected() || (roamingIsAllowed && info.isRoaming()));
         return hasConnectivity;
     }
 
