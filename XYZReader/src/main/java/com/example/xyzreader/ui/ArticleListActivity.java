@@ -1,5 +1,6 @@
 package com.example.xyzreader.ui;
 
+import android.app.Activity;
 import android.app.ActivityOptions;
 import android.app.LoaderManager;
 import android.content.BroadcastReceiver;
@@ -12,6 +13,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.support.design.widget.CoordinatorLayout;
 import android.support.design.widget.Snackbar;
+import android.support.v4.app.ActivityOptionsCompat;
 import android.support.v4.app.SharedElementCallback;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
@@ -57,10 +59,7 @@ public class ArticleListActivity extends AppCompatActivity implements
         LoaderManager.LoaderCallbacks<Cursor> {
 
     private static final String TAG = ArticleListActivity.class.toString();
-    //private Toolbar mToolbar;
-    //private SwipeRefreshLayout mSwipeRefreshLayout;
-    //private RecyclerView mRecyclerView;
-    //private CoordinatorLayout coordinatorLayout;
+
 
     @BindView(R.id.toolbar)
     Toolbar mToolbar;
@@ -71,12 +70,8 @@ public class ArticleListActivity extends AppCompatActivity implements
     @BindView(R.id.cLayout)
     CoordinatorLayout coordinatorLayout;
 
-    static final String EXTRA_STARTING_ARTICLE_POSITION = "extra_starting_item_position";
-    static final String EXTRA_CURRENT_ARTICLE_POSITION = "extra_current_item_position";
-
-    private Bundle mTmpReenterState;
     public boolean mIsRefreshing;
-    public static boolean mIsDetailsActivityStarted;
+    private Context mContext;
 
     private SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.sss");
     // Use default locale format
@@ -84,43 +79,7 @@ public class ArticleListActivity extends AppCompatActivity implements
     // Most time functions can only handle 1902 - 2037
     private GregorianCalendar START_OF_EPOCH = new GregorianCalendar(2, 1, 1);
 
-    @SuppressWarnings("NewApi")
-    private final SharedElementCallback mCallback = new SharedElementCallback() {
-        @Override
-        public void onMapSharedElements(List<String> names, Map<String, View> sharedElements) {
-            if (mTmpReenterState != null) {
-                int startingPosition = mTmpReenterState.getInt(EXTRA_STARTING_ARTICLE_POSITION);
-                int currentPosition = mTmpReenterState.getInt(EXTRA_CURRENT_ARTICLE_POSITION);
-                if (startingPosition != currentPosition) {
-                    // If startingPosition != currentPosition the user must have swiped to a
-                    // different page in the DetailsActivity. We must update the shared element
-                    // so that the correct one falls into place.
-                    String newTransitionName = getString(R.string.transition) + currentPosition;
-                    View newSharedElement = mRecyclerView.findViewWithTag(newTransitionName);
-                    if (newSharedElement != null) {
-                        names.clear();
-                        names.add(newTransitionName);
-                        sharedElements.clear();
-                        sharedElements.put(newTransitionName, newSharedElement);
-                    }
-                }
 
-                mTmpReenterState = null;
-            } else {
-                // If mTmpReenterState is null, then the activity is exiting.
-                View navigationBar = findViewById(android.R.id.navigationBarBackground);
-                View statusBar = findViewById(android.R.id.statusBarBackground);
-                if (navigationBar != null) {
-                    names.add(navigationBar.getTransitionName());
-                    sharedElements.put(navigationBar.getTransitionName(), navigationBar);
-                }
-                if (statusBar != null) {
-                    names.add(statusBar.getTransitionName());
-                    sharedElements.put(statusBar.getTransitionName(), statusBar);
-                }
-            }
-        }
-    };
 
 
         @Override
@@ -131,9 +90,6 @@ public class ArticleListActivity extends AppCompatActivity implements
 
         setSupportActionBar(mToolbar);
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            postponeEnterTransition();
-        }
 
         //logic for swipe to refresh action
         mSwipeRefreshLayout.setColorSchemeResources(R.color.theme_primary, R.color.theme_primary_dark, R.color.theme_accent);
@@ -274,19 +230,20 @@ public class ArticleListActivity extends AppCompatActivity implements
                 @Override
                 public void onClick(View view) {
 
-                    Intent intent = new Intent(Intent.ACTION_VIEW,
-                            ItemsContract.Items.buildItemUri(getItemId(vh.getAdapterPosition())));
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                        Bundle bundle = ActivityOptions.makeSceneTransitionAnimation(
+                    int mArticlePosition = vh.getAdapterPosition();
+
+                    ActivityOptionsCompat bundle = null;
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+                        bundle = ActivityOptionsCompat.makeSceneTransitionAnimation(
                                 ArticleListActivity.this,
                                 vh.thumbnailView,
-                                vh.thumbnailView.getTransitionName()).toBundle();
-                        //Log.d(LOG_TAG, "onClick() transitionName ==>" + vh.thumbnailView.getTransitionName());
-                        startActivity(intent, bundle);
-                    } else {
-                        startActivity(intent);
-
+                                vh.thumbnailView.getTransitionName()
+                        );
                     }
+                    Intent intent = new Intent(Intent.ACTION_VIEW,
+                            ItemsContract.Items.buildItemUri(getItemId(vh.getAdapterPosition())));
+                    getApplicationContext().startActivity(intent, bundle.toBundle());
+
                 }
             });
             return vh;
@@ -348,17 +305,5 @@ public class ArticleListActivity extends AppCompatActivity implements
         }
     }
 
-    private void scheduleStartPostponedTransition(final View sharedElement) {
-        sharedElement.getViewTreeObserver().addOnPreDrawListener(
-                new ViewTreeObserver.OnPreDrawListener() {
-                    @Override
-                    public boolean onPreDraw() {
-                        sharedElement.getViewTreeObserver().removeOnPreDrawListener(this);
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                            startPostponedEnterTransition();
-                        }
-                        return true;
-                    }
-                });
-    }
+
 }
